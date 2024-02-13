@@ -98,7 +98,7 @@ rapTS <- map(rapTS_cols, generate_data_frame, rapTS) %>%
   select(-`NDVI`)
 
 # save table to csv
-write.csv(rapTS, paste0(home,"/",dataDir,"/",datasetCE,"_ts.csv"),row.names = FALSE)  
+write.csv(rapTS, paste0(home,"/",dataDir,"/",datasetCE,"_perc_ts.csv"),row.names = FALSE)  
 
 # plot a time series
 # ggplot(rapTS, aes(Date,Value))+
@@ -106,28 +106,41 @@ write.csv(rapTS, paste0(home,"/",dataDir,"/",datasetCE,"_ts.csv"),row.names = FA
 #   ggtitle(paste0("NDVI at ",(n_lat+s_lat)/2,",",(w_lon+e_lon)/2))
 #####
 
+#####
+# set start/end dates based on current year
+sDate<-rapTS$Date[nrow(rapTS)-3]
+eDate<-rapTS$Date[nrow(rapTS)]
+dateRange<-cbind.data.frame(sDate,eDate)
+write.csv(dateRange, paste0(home,"/",dataDir,"/dateRange.csv"),row.names = FALSE)
+#####
+
+
 ##### download anom raster ----
-tempFile<-paste0(datasetCE,"_anom")
+tempFile<-paste0(datasetCE,"_perc")
 exportPath<-paste0(bucket,"/",tempFile)
 
 print(paste0("Processing ", tempFile))
 
-endpoint = '/raster/export/anomalies'
+#endpoint = '/raster/export/anomalies'
+endpoint = '/raster/export/percentiles' # for percentile
+
 
 ##### q1 -- NDVI Anomaly ----
 query <- list(dataset = datasetCE,
               variable = "NDVI",
               temporal_statistic = "mean",
+              percentile_step = 1,
               bounding_box = bbox,
               export_path = exportPath,
               #start_date = "2023-09-01",
               #end_date = "2023-10-01",
               export_resolution = 120,
-              start_date = rapTS$Date[nrow(rapTS)-3],
-              end_date = rapTS$Date[nrow(rapTS)],
+              start_date = sDate,
+              end_date = eDate,
               start_year = format(rapTS$Date[1], "%Y"),
-              end_year = format(rapTS$Date[nrow(rapTS)], "%Y"),
-              calculation = 'anom'
+              end_year = format(rapTS$Date[nrow(rapTS)], "%Y")
+              #calculation = 'anom'
+              #calculation = 'anompercentchange'
 )
 #####
 
@@ -142,7 +155,7 @@ if(get_raster$status_code==200){
   
   # wait for processing
   ptm <- proc.time()
-  while(nrow(objG)!=2){
+  while(nrow(objG)==0){
     print("waiting for raster to process")
     objG<-gcs_list_objects(bucket)
     #gcs_list_objects(bucket)
@@ -156,30 +169,30 @@ if(get_raster$status_code==200){
   gcs_get_object(objG$name[1],
                  saveToDisk = paste0(home,"/",dataDir,"/",objG$name[1]),
                  bucket = bucket, overwrite = TRUE)
-  gcs_get_object(objG$name[2],
-                 saveToDisk = paste0(home,"/",dataDir,"/",objG$name[2]),
-                 bucket = bucket, overwrite = TRUE)
+  # gcs_get_object(objG$name[2],
+  #                saveToDisk = paste0(home,"/",dataDir,"/",objG$name[2]),
+  #                bucket = bucket, overwrite = TRUE)
   anomNDVIpb<-"Y"
   # clean up Google Bucket
   objG<-gcs_list_objects(bucket)
     gcs_delete_object(objG$name[1], bucket=bucket)
-    gcs_delete_object(objG$name[2], bucket=bucket)
+    #gcs_delete_object(objG$name[2], bucket=bucket)
 }else{
   print("NDVI anom download unsuccessful")
   anomNDVIpb<-"N"
 }
 #####
 
-# merge and resave files
-# https://stackoverflow.com/questions/15876591/merging-multiple-rasters-in-r
-temp1<-terra::rast(paste0(home,"/",dataDir,"/",objG$name[1]))
-temp2<-terra::rast(paste0(home,"/",dataDir,"/",objG$name[2]))
-  s <- terra::src(temp1, temp2)
-  m <- terra::merge(s)
-terra::writeRaster(m, paste0("./",dataDir,"/",datasetCE,"_anom.tif"), filetype = "GTiff", overwrite = TRUE)
-unlink(paste0(home,"/",dataDir,"/",objG$name[1]))
-unlink(paste0(home,"/",dataDir,"/",objG$name[2]))
-#####
+# # merge and resave files
+# # https://stackoverflow.com/questions/15876591/merging-multiple-rasters-in-r
+# temp1<-terra::rast(paste0(home,"/",dataDir,"/",objG$name[1]))
+# temp2<-terra::rast(paste0(home,"/",dataDir,"/",objG$name[2]))
+#   s <- terra::src(temp1, temp2)
+#   m <- terra::merge(s)
+# terra::writeRaster(m, paste0("./",dataDir,"/",datasetCE,"_anom.tif"), filetype = "GTiff", overwrite = TRUE)
+# unlink(paste0(home,"/",dataDir,"/",objG$name[1]))
+# unlink(paste0(home,"/",dataDir,"/",objG$name[2]))
+# #####
 
 # send notification     
 #source("RAPpushNotify.R")

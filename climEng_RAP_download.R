@@ -30,17 +30,23 @@ dataDir<-"downloads/RAP"
 # w_lon<- (-111.809578)
 # e_lon<- (-111.798720)
 
-# AZ region -114.927979,31.250378,-109,37.090240
-n_lat<- 37.090240
-s_lat<- 31.250378
-w_lon<- (-114.927979)
-e_lon<- (-109)
+# KNF region -114.927979,31.250378,-109,37.090240
+# n_lat<- 36.9423
+# s_lat<- 34.9886
+# w_lon<- (-112.6718)
+# e_lon<- (-111.6932)
 
-# SW region -114.927979,31.250378,-102.919922,37.090240
+# AZ region -114.927979,31.250378,-109,37.090240
 # n_lat<- 37.090240
 # s_lat<- 31.250378
 # w_lon<- (-114.927979)
-# e_lon<- (-102.919922)
+# e_lon<- (-109)
+
+# SW region -114.927979,31.250378,-102.919922,37.090240
+n_lat<- 37.090240
+s_lat<- 31.250378
+w_lon<- (-114.927979)
+e_lon<- (-102.919922)
 
 bbox<-paste0("[",w_lon,",",s_lat,",",e_lon,",",n_lat,"]")
 centroid<-paste0("[[",(w_lon+e_lon)/2,",",(n_lat+s_lat)/2,"]]")
@@ -115,6 +121,15 @@ write.csv(rapTS, paste0(home,"/",dataDir,"/RAPts.csv"),row.names = FALSE)
 #   ggtitle(paste0("RAP herbAGB (lbs/ac) at ",(n_lat+s_lat)/2,",",(w_lon+e_lon)/2))
 #####
 
+#####
+# set start/end dates based on current year
+sDate<-paste0(format(rapTS$Date[nrow(rapTS)], "%Y"),"-01-01")
+eDate<-rapTS$Date[nrow(rapTS)]
+dateRange<-cbind.data.frame(sDate,eDate)
+write.csv(dateRange, paste0(home,"/",dataDir,"/dateRange.csv"),row.names = FALSE)
+#####
+
+
 ##
 
 ##### download raw RAP raster ----
@@ -144,9 +159,12 @@ endpoint = '/raster/export/values'
                   temporal_statistic = "total",
                   bounding_box = bbox,
                   export_path = exportPath,
-                  #export_resolution = 1000,
-                  start_date = paste0(format(rapTS$Date[nrow(rapTS)], "%Y"),"-01-01"),
-                  end_date = rapTS$Date[nrow(rapTS)]
+                  export_resolution = 120,
+                  start_date = sDate,
+                  end_date = eDate
+                  #start_date = "2023-01-01",
+                  #end_date = "2023-11-17"
+                  
     )
     
     # Run GET request to get data
@@ -190,78 +208,81 @@ endpoint = '/raster/export/values'
 #####
 
 ##### download anom raster ----
-# tempFile<-"SW_anomRAP"
-# exportPath<-paste0(bucket,"/",tempFile)
-# 
-# print(paste0("Processing ", tempFile))
-# 
-# endpoint = '/raster/export/anomalies'
-# 
-#     ##### q1 --- anomaly of most recent period -----
-#     # query <- list(dataset = 'RAP_PRODUCTION_16DAY',
-#     #               variable = "herbaceousAGB_mask",
-#     #               temporal_statistic = "mean",
-#     #               bounding_box = bbox,
-#     #               export_path = exportPath,
-#     #               start_date = rapTS$Date[nrow(rapTS)],
-#     #               end_date = rapTS$Date[nrow(rapTS)],
-#     #               start_year = '1986',
-#     #               end_year = '2022',
-#     #               calculation = 'anom'
-#     #              )
-#     #####
-#     
-#     ##### q2 -- anomaly of cumulative production ----
-#     query <- list(dataset = 'RAP_PRODUCTION_16DAY',
-#                   variable = "herbaceousAGB",
-#                   temporal_statistic = "total",
-#                   bounding_box = bbox,
-#                   export_path = exportPath,
-#                   start_date = paste0(format(rapTS$Date[nrow(rapTS)], "%Y"),"-01-01"),
-#                   end_date = rapTS$Date[nrow(rapTS)],
-#                   start_year = '1986',
-#                   end_year = format(rapTS$Date[nrow(rapTS)], "%Y"),
-#                   calculation = 'anompercentof'
-#     )
-#     #####
-#     
-#     # Run GET request to get data
-#     get_raster <- GET(paste0(root_url, endpoint), config = add_headers(Authorization = key), query = query)
-#     print(get_raster)
-#     
-#     # try again if not 200 status
-#     while(get_raster$status_code!=200){
-#       get_raster <- GET(paste0(root_url, endpoint), config = add_headers(Authorization = key), query = query)
-#       print(get_raster)
-#     }
-#     
-#     
-#     # get raster if 200 success code
-#     if(get_raster$status_code==200){
-#       # download file from google cloud
-#       objG<-gcs_list_objects(bucket)
-#       
-#       # wait for processing
-#       ptm <- proc.time()
-#       while(length(which(objG$name==paste0(tempFile,".tif")))==0){
-#         print("waiting for raster to process")
-#         objG<-gcs_list_objects(bucket)
-#         #gcs_list_objects(bucket)
-#         Sys.sleep(30)
-#       }
-#       anomTime<-proc.time() - ptm
-#       print(anomTime)
-#       # download from bucket
-#       gcs_get_object(objG$name[[which(objG$name==paste0(tempFile,".tif"))]], saveToDisk = paste0(home,"/",dataDir,"/",tempFile,".tif"), bucket = bucket, overwrite = TRUE)
-#       # set flag
-#       anomRAPpb<-"Y"
-#       # clean up file
-#       objG<-gcs_list_objects(bucket)
-#       gcs_delete_object(objG$name[1], bucket=bucket)
-#     }else{
-#       print("RAP anom download unsuccessful")
-#       anomRAPpb<-"N"
-#     }
+tempFile<-"SW_anomRAP"
+exportPath<-paste0(bucket,"/",tempFile)
+
+print(paste0("Processing ", tempFile))
+
+endpoint = '/raster/export/anomalies'
+
+    ##### q1 --- anomaly of most recent period -----
+    # query <- list(dataset = 'RAP_PRODUCTION_16DAY',
+    #               variable = "herbaceousAGB_mask",
+    #               temporal_statistic = "mean",
+    #               bounding_box = bbox,
+    #               export_path = exportPath,
+    #               start_date = rapTS$Date[nrow(rapTS)],
+    #               end_date = rapTS$Date[nrow(rapTS)],
+    #               start_year = '1986',
+    #               end_year = '2022',
+    #               calculation = 'anom'
+    #              )
+    #####
+
+    ##### q2 -- anomaly of cumulative production ----
+    query <- list(dataset = 'RAP_PRODUCTION_16DAY',
+                  variable = "herbaceousAGB",
+                  temporal_statistic = "total",
+                  bounding_box = bbox,
+                  export_path = exportPath,
+                  export_resolution = 120,
+                  start_date = sDate,
+                  end_date = eDate,
+                  #start_date = "2023-01-01",
+                  #end_date = "2023-11-17",
+                  start_year = '1986',
+                  end_year = format(eDate, "%Y"),
+                  calculation = 'anompercentof'
+    )
+    #####
+
+    # Run GET request to get data
+    get_raster <- GET(paste0(root_url, endpoint), config = add_headers(Authorization = key), query = query)
+    print(get_raster)
+
+    # try again if not 200 status
+    while(get_raster$status_code!=200){
+      get_raster <- GET(paste0(root_url, endpoint), config = add_headers(Authorization = key), query = query)
+      print(get_raster)
+    }
+
+
+    # get raster if 200 success code
+    if(get_raster$status_code==200){
+      # download file from google cloud
+      objG<-gcs_list_objects(bucket)
+
+      # wait for processing
+      ptm <- proc.time()
+      while(length(which(objG$name==paste0(tempFile,".tif")))==0){
+        print("waiting for raster to process")
+        objG<-gcs_list_objects(bucket)
+        #gcs_list_objects(bucket)
+        Sys.sleep(30)
+      }
+      anomTime<-proc.time() - ptm
+      print(anomTime)
+      # download from bucket
+      gcs_get_object(objG$name[[which(objG$name==paste0(tempFile,".tif"))]], saveToDisk = paste0(home,"/",dataDir,"/",tempFile,".tif"), bucket = bucket, overwrite = TRUE)
+      # set flag
+      anomRAPpb<-"Y"
+      # clean up file
+      objG<-gcs_list_objects(bucket)
+      gcs_delete_object(objG$name[1], bucket=bucket)
+    }else{
+      print("RAP anom download unsuccessful")
+      anomRAPpb<-"N"
+    }
 #####
 
 ##
