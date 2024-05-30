@@ -12,6 +12,7 @@ library(tidyverse)
 rawRAPpb<-"?"
 anomRAPpb<-"?"
 percRAPpb<-"?"
+SNOpb<-"?"
 
 # set home dir
 home<-"/home/crimmins/RProjects/ClimateEngineSW"
@@ -132,80 +133,80 @@ write.csv(dateRange, paste0(home,"/",dataDir,"/dateRange.csv"),row.names = FALSE
 
 ##
 
-##### download raw RAP raster ----
-tempFile<-"SW_rawRAP"
-exportPath<-paste0(bucket,"/",tempFile)
-
-print(paste0("Processing ", tempFile))
-
-endpoint = '/raster/export/values'
-
-    ##### q1 - raw data, latest period ----
-    # query <- list(dataset = 'RAP_PRODUCTION_16DAY',
-    #               variable = "herbaceousAGB_mask",
-    #               temporal_statistic = "mean",
-    #               bounding_box = bbox,
-    #               export_path = exportPath,
-    #               start_date = rapTS$Date[nrow(rapTS)],
-    #               end_date = rapTS$Date[nrow(rapTS)],
-    #               start_year = '1986',
-    #               end_year = '2022'
-    # )
-    #####
-    
-    ##### q2 - total production since Jan 1st
-    query <- list(dataset = 'RAP_PRODUCTION_16DAY',
-                  variable = "herbaceousAGB",
-                  temporal_statistic = "total",
-                  bounding_box = bbox,
-                  export_path = exportPath,
-                  export_resolution = 120,
-                  start_date = sDate,
-                  end_date = eDate
-                  #start_date = "2023-01-01",
-                  #end_date = "2023-11-17"
-                  
-    )
-    
-    # Run GET request to get data
-    get_raster <- GET(paste0(root_url, endpoint), config = add_headers(Authorization = key), query = query)
-    print(get_raster)
-    
-    # try again if not 200 status
-    while(get_raster$status_code!=200){
-      get_raster <- GET(paste0(root_url, endpoint), config = add_headers(Authorization = key), query = query)
-      print(get_raster)
-    }
-   
-# add in retry if 500 error    
-    
-    # get raster if 200 success code
-    if(get_raster$status_code==200){
-      # download file from google cloud
-      objG<-gcs_list_objects(bucket)
-      
-      # wait for processing
-      ptm <- proc.time()
-      while(length(objG)==0){
-        print("waiting for raster to process")
-        objG<-gcs_list_objects(bucket)
-        Sys.sleep(30)
-      }
-      rawTime<-proc.time() - ptm
-      print(rawTime)
-      # download from bucket
-      gcs_get_object(objG$name[[which(objG$name==paste0(tempFile,".tif"))]], saveToDisk = paste0(home,"/",dataDir,"/",tempFile,".tif"), bucket = bucket, overwrite = TRUE)
-      # set flag
-      rawRAPpb<-"Y"
-      # clean up file
-      objG<-gcs_list_objects(bucket)
-      gcs_delete_object(objG$name[1], bucket=bucket)
-    }else{
-      print("RAW RAP download unsuccessful")
-      rawRAPpb<-"N"
-    }
-     
-#####
+# ##### download raw RAP raster ----
+# tempFile<-"SW_rawRAP"
+# exportPath<-paste0(bucket,"/",tempFile)
+# 
+# print(paste0("Processing ", tempFile))
+# 
+# endpoint = '/raster/export/values'
+# 
+#     ##### q1 - raw data, latest period ----
+#     # query <- list(dataset = 'RAP_PRODUCTION_16DAY',
+#     #               variable = "herbaceousAGB_mask",
+#     #               temporal_statistic = "mean",
+#     #               bounding_box = bbox,
+#     #               export_path = exportPath,
+#     #               start_date = rapTS$Date[nrow(rapTS)],
+#     #               end_date = rapTS$Date[nrow(rapTS)],
+#     #               start_year = '1986',
+#     #               end_year = '2022'
+#     # )
+#     #####
+#     
+#     ##### q2 - total production since Jan 1st
+#     query <- list(dataset = 'RAP_PRODUCTION_16DAY',
+#                   variable = "herbaceousAGB",
+#                   temporal_statistic = "total",
+#                   bounding_box = bbox,
+#                   export_path = exportPath,
+#                   export_resolution = 120,
+#                   start_date = sDate,
+#                   end_date = eDate
+#                   #start_date = "2023-01-01",
+#                   #end_date = "2023-11-17"
+#                   
+#     )
+#     
+#     # Run GET request to get data
+#     get_raster <- GET(paste0(root_url, endpoint), config = add_headers(Authorization = key), query = query)
+#     print(get_raster)
+#     
+#     # try again if not 200 status
+#     while(get_raster$status_code!=200){
+#       get_raster <- GET(paste0(root_url, endpoint), config = add_headers(Authorization = key), query = query)
+#       print(get_raster)
+#     }
+#    
+# # add in retry if 500 error    
+#     
+#     # get raster if 200 success code
+#     if(get_raster$status_code==200){
+#       # download file from google cloud
+#       objG<-gcs_list_objects(bucket)
+#       
+#       # wait for processing
+#       ptm <- proc.time()
+#       while(length(objG)==0){
+#         print("waiting for raster to process")
+#         objG<-gcs_list_objects(bucket)
+#         Sys.sleep(30)
+#       }
+#       rawTime<-proc.time() - ptm
+#       print(rawTime)
+#       # download from bucket
+#       gcs_get_object(objG$name[[which(objG$name==paste0(tempFile,".tif"))]], saveToDisk = paste0(home,"/",dataDir,"/",tempFile,".tif"), bucket = bucket, overwrite = TRUE)
+#       # set flag
+#       rawRAPpb<-"Y"
+#       # clean up file
+#       objG<-gcs_list_objects(bucket)
+#       gcs_delete_object(objG$name[1], bucket=bucket)
+#     }else{
+#       print("RAW RAP download unsuccessful")
+#       rawRAPpb<-"N"
+#     }
+#      
+# #####
 
 ##### download anom raster ----
 tempFile<-"SW_anomRAP"
@@ -348,6 +349,83 @@ endpoint = '/raster/export/anomalies'
 #     }
 #####
 
+##### download SNODAS raster for masking ----
+tempFile<-"SW_SNODAS"
+exportPath<-paste0(bucket,"/",tempFile)
+
+print(paste0("Processing ", tempFile))
+
+endpoint = '/raster/export/values'
+
+##### q1 - raw data, latest period ----
+# query <- list(dataset = 'RAP_PRODUCTION_16DAY',
+#               variable = "herbaceousAGB_mask",
+#               temporal_statistic = "mean",
+#               bounding_box = bbox,
+#               export_path = exportPath,
+#               start_date = rapTS$Date[nrow(rapTS)],
+#               end_date = rapTS$Date[nrow(rapTS)],
+#               start_year = '1986',
+#               end_year = '2022'
+# )
+#####
+
+##### q2 - total production since Jan 1st
+query <- list(dataset = 'SNODAS',
+              variable = "Snow_Depth",
+              temporal_statistic = "mean",
+              bounding_box = bbox,
+              export_path = exportPath,
+              #export_resolution = 120,
+              start_date = eDate-30,
+              end_date = eDate
+              #start_date = "2023-01-01",
+              #end_date = "2023-11-17"
+              
+)
+
+# Run GET request to get data
+get_raster <- GET(paste0(root_url, endpoint), config = add_headers(Authorization = key), query = query)
+print(get_raster)
+
+# try again if not 200 status
+while(get_raster$status_code!=200){
+  get_raster <- GET(paste0(root_url, endpoint), config = add_headers(Authorization = key), query = query)
+  print(get_raster)
+}
+
+# add in retry if 500 error    
+
+# get raster if 200 success code
+if(get_raster$status_code==200){
+  # download file from google cloud
+  objG<-gcs_list_objects(bucket)
+  
+  # wait for processing
+  ptm <- proc.time()
+  while(length(objG)==0){
+    print("waiting for raster to process")
+    objG<-gcs_list_objects(bucket)
+    Sys.sleep(30)
+  }
+  rawTime<-proc.time() - ptm
+  print(rawTime)
+  # download from bucket
+  gcs_get_object(objG$name[[which(objG$name==paste0(tempFile,".tif"))]], saveToDisk = paste0(home,"/",dataDir,"/",tempFile,".tif"), bucket = bucket, overwrite = TRUE)
+  # set flag
+  SNOpb<-"Y"
+  # clean up file
+  objG<-gcs_list_objects(bucket)
+  gcs_delete_object(objG$name[1], bucket=bucket)
+}else{
+  print("SNODAS download unsuccessful")
+  SNOpb<-"N"
+}
+
+#####
+    
+    
+    
 ##### CLEAN UP GOOGLE BUCKET ----
 objG<-gcs_list_objects(bucket)
 
@@ -361,7 +439,7 @@ if(nrow(objG)!=0){
 
 # send notification     
 #source("RAPpushNotify.R")
-textPB<-paste0("RAP Download Status: raw(",rawRAPpb,"), anom(",anomRAPpb,"), perc(",percRAPpb,")")   
+textPB<-paste0("RAP Download Status: raw(",rawRAPpb,"), anom(",anomRAPpb,"), perc(",percRAPpb,")","), snodas(",SNOpb,")")   
 RPushbullet::pbPost("note", textPB, apikey =pbKey)
     
     
