@@ -216,7 +216,7 @@ if(resp$status_code==200){
 
 # send notification     
 #source("RAPpushNotify.R")
-textPB<-paste0("ClimEng NDVI Download Status: NDVIanom(",anomNDVIpb,")")   
-RPushbullet::pbPost("note", textPB, apikey =pbKey)
+#textPB<-paste0("ClimEng NDVI Download Status: NDVIanom(",anomNDVIpb,")")   
+#RPushbullet::pbPost("note", textPB, apikey =pbKey)
 
 
