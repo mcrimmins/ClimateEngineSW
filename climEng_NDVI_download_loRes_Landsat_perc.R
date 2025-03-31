@@ -55,7 +55,7 @@ centroid<-paste0("[[",(w_lon+e_lon)/2,",",(n_lat+s_lat)/2,"]]")
 # Define root url for Climate Engine API
 root_url <- 'https://api.climateengine.org/'
 # Define endpoint for initial data request
-endpoint <- "timeseries/native/points"
+endpoint <- "timeseries/native/coordinates"
 
 # Define API arguments time-series endpoint to get long-term blend data 
 query <- list(dataset = datasetCE,

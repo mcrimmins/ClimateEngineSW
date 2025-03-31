@@ -28,16 +28,16 @@ dataDir<-paste0(dataDir,"/",datasetCE)
 
 ##### set bounding box
 # small testing bbox
-# n_lat<- 35.149530
-# s_lat<- 35.141283
-# w_lon<- (-111.809578)
-# e_lon<- (-111.798720)
+n_lat<- 35.149530
+s_lat<- 35.141283
+w_lon<- (-111.809578)
+e_lon<- (-111.798720)
 
 # medium testing bbox -112.401123,34.551811,-111.390381,35.585852
-n_lat<- 35.585852
-s_lat<- 34.551811
-w_lon<- (-112.401123)
-e_lon<- (-111.390381)
+# n_lat<- 35.585852
+# s_lat<- 34.551811
+# w_lon<- (-112.401123)
+# e_lon<- (-111.390381)
 
 # SW region -114.927979,31.250378,-102.919922,37.090240
 # n_lat<- 37.090240
@@ -55,7 +55,8 @@ centroid<-paste0("[[",(w_lon+e_lon)/2,",",(n_lat+s_lat)/2,"]]")
 # Define root url for Climate Engine API
 root_url <- 'https://api.climateengine.org/'
 # Define endpoint for initial data request
-endpoint <- "timeseries/native/points"
+#endpoint <- "timeseries/native/points"
+endpoint <- "timeseries/native/coordinates"
 
 # Define API arguments time-series endpoint to get long-term blend data 
 query <- list(dataset = datasetCE,
